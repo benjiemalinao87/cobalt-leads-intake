@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   User, Phone, Mail, MapPin, Calendar, FileText, Home, Car, 
@@ -96,10 +95,35 @@ const IntakeForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    
+    if (name === "phone") {
+      const formattedPhone = formatPhoneNumber(value);
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: formattedPhone,
+      }));
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
+  };
+
+  const formatPhoneNumber = (value: string): string => {
+    const phoneDigits = value.replace(/\D/g, "");
+    if (phoneDigits.length === 0) return "";
+    if (phoneDigits.length > 0 && !value.includes("+1")) {
+      if (phoneDigits.length >= 10) {
+        return `+1${phoneDigits.slice(0, 10)}`;
+      }
+      return `+1${phoneDigits}`;
+    }
+    if (value.includes("+1")) {
+      const digits = value.replace(/\D/g, "");
+      return `+1${digits.slice(1, 11)}`;
+    }
+    return value;
   };
 
   const handleRadioChange = (name: string, value: string) => {
@@ -338,8 +362,11 @@ const IntakeForm: React.FC = () => {
                   onChange={handleChange}
                   required
                   className="tesla-input w-full"
-                  placeholder="(123) 456-7890"
+                  placeholder="+1 (xxx) xxx-xxxx"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  US format with country code (+1) will be applied automatically
+                </p>
               </div>
               <div>
                 <label htmlFor="email" className="tesla-label">
