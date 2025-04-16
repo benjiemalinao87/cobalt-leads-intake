@@ -48,23 +48,40 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
+    
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
+    
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
+    
     --primary: 199 89% 48%;
     --primary-foreground: 222.2 47.4% 11.2%;
+    
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
+    
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+    
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
+    
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+    
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 199 89% 48%;
+
+    --sidebar-background: 240 10% 3.9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 198 93% 60%;
   }
 }
 
@@ -82,34 +99,43 @@
   background-image: radial-gradient(circle at center, rgba(14, 165, 233, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
+.dark .tesla-form-container {
+  background-image: radial-gradient(circle at center, rgba(14, 165, 233, 0.05) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
 .tesla-input {
-  @apply bg-white/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none;
+  @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
 }
 
 .tesla-label {
-  @apply text-sm font-medium text-gray-700 mb-1;
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
 }
 
 .tesla-select {
-  @apply bg-white/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none;
+  @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
 }
 
 .tesla-checkbox {
-  @apply h-5 w-5 rounded border-gray-300 text-tesla-blue-500 focus:ring-tesla-blue-500;
+  @apply h-5 w-5 rounded border-gray-300 text-tesla-blue-500 focus:ring-tesla-blue-500 dark:border-gray-600;
 }
 
 .tesla-radio {
-  @apply h-5 w-5 border-gray-300 text-tesla-blue-500 focus:ring-tesla-blue-500;
+  @apply h-5 w-5 border-gray-300 text-tesla-blue-500 focus:ring-tesla-blue-500 dark:border-gray-600;
 }
 
 .section-title {
-  @apply text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200;
+  @apply text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700;
 }
 
 .tesla-btn {
-  @apply bg-tesla-blue-500 hover:bg-tesla-blue-600 text-white font-medium py-3 px-6 rounded-md transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-tesla-blue-300 focus:ring-offset-2;
+  @apply bg-tesla-blue-500 hover:bg-tesla-blue-600 text-white font-medium py-3 px-6 rounded-md transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-tesla-blue-300 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
 }
 
 .tesla-form-container {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .tesla-form-container {
+  @apply bg-gray-900/95 text-white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
