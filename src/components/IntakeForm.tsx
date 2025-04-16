@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -207,11 +206,13 @@ const IntakeForm: React.FC = () => {
     <div className="w-full max-w-5xl mx-auto py-8 px-4">
       <div className="tesla-form-container bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-xl">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Tesla Blue Solar Intake Form</h1>
-          <div className="w-20 h-10">
-            <svg viewBox="0 0 342 35" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-              <path d="M0 .1a9.7 9.7 0 0 0 7 7h11l.5.1v27.6h6.8V7.3L26 7h11a9.8 9.8 0 0 0 7-7H0zm238.6 0h-6.8v34.8H263a9.7 9.7 0 0 0 6-6.8h-30.3V0zm-52.3 6.8c3.6-1 6.6-3.8 7.4-6.9l-38.1.1v20.6h31.1v7.2h-24.4a13.6 13.6 0 0 0-8.7 7h39.9v-21h-31.2v-7h24zm116.2 28h6.7v-14h24.6v14h6.7v-21h-38zM85.3 7h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7zm0 13.8h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7zm0 14.1h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7zM308.5 7h26a9.6 9.6 0 0 0 7-7h-40a9.6 9.6 0 0 0 7 7z" fill="#0EA5E9"/>
-            </svg>
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Cobalt Power Solar Intake Form</h1>
+          <div className="w-40 h-20">
+            <img 
+              src="https://www.cobaltpower.com/images/logos/Transparent-Logo.2212160539550.png" 
+              alt="Cobalt Power Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
         </div>
 
