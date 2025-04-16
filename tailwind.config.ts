@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -19,6 +20,19 @@ export default {
 		},
 		extend: {
 			colors: {
+				tesla: {
+					blue: {
+						100: "#EBF8FF",
+						200: "#BEE3F8",
+						300: "#90CDF4",
+						400: "#63B3ED",
+						500: "#0EA5E9", // Primary Tesla Blue
+						600: "#2B6CB0",
+						700: "#2C5282",
+						800: "#1A365D",
+						900: "#0F2942",
+					}
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
