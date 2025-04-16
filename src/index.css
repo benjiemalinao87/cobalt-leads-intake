@@ -49,7 +49,7 @@
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     
-    --card: 222.2 84% 4.9%;
+    --card: 217 33% 17%;
     --card-foreground: 210 40% 98%;
     
     --popover: 222.2 84% 4.9%;
@@ -71,7 +71,7 @@
     --destructive-foreground: 210 40% 98%;
     
     --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --input: 215 28% 17%;
     --ring: 199 89% 48%;
 
     --sidebar-background: 240 10% 3.9%;
@@ -104,7 +104,7 @@
 }
 
 .tesla-input {
-  @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
+  @apply bg-white/80 dark:bg-[#3a4149]/90 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
 }
 
 .tesla-label {
@@ -112,7 +112,7 @@
 }
 
 .tesla-select {
-  @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
+  @apply bg-white/80 dark:bg-[#3a4149]/90 backdrop-blur-sm border-0 shadow-sm rounded-md px-4 py-3 transition-all focus:ring-2 focus:ring-tesla-blue-500 focus:outline-none dark:text-white;
 }
 
 .tesla-checkbox {
@@ -136,6 +136,14 @@
 }
 
 .dark .tesla-form-container {
-  @apply bg-gray-900/95 text-white;
+  @apply bg-[#111827]/95 text-white;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.dark .bg-gray-50 {
+  @apply bg-[#1e2937]/80;
+}
+
+.dark .section-icon {
+  @apply text-blue-400;
 }

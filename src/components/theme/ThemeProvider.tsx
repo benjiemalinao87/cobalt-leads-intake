@@ -34,6 +34,9 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
     
+    // Add a transition class for smooth theme switching
+    root.classList.add('transition-colors', 'duration-300');
+    
     root.classList.remove("light", "dark");
     
     if (theme === "system") {
