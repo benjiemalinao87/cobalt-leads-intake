@@ -91,6 +91,13 @@ const IntakeForm: React.FC = () => {
     preferredProducts: "",
   });
 
+  const initialAutoFields = {
+    createdBy: formData.createdBy,
+    leadStatus: formData.leadStatus,
+    dateCreated: formData.dateCreated,
+    assignedTo: formData.assignedTo,
+  };
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -149,6 +156,50 @@ const IntakeForm: React.FC = () => {
     return requiredFields.includes(fieldName);
   };
 
+  const resetForm = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      zip: "",
+      leadSource: "",
+      productType: "",
+      createdBy: initialAutoFields.createdBy,
+      leadStatus: initialAutoFields.leadStatus,
+      dateCreated: initialAutoFields.dateCreated,
+      assignedTo: initialAutoFields.assignedTo,
+      avgElectricBill: "",
+      avgKwhConsumption: "",
+      hasEV: "",
+      interestedInStorage: "",
+      goals: "",
+      notes: "",
+      hasHOA: "",
+      jobType: "",
+      constructionType: "",
+      installationType: "",
+      roofType: "",
+      primaryPhoneType: "",
+      titleOfLead: "",
+      floorCount: "",
+      referralSource: "",
+      hasPool: "",
+      utilityProvider: "",
+      hasBill: "",
+      roofAge: "",
+      roofCondition: "",
+      roofShade: "",
+      projectReadiness: "",
+      referrals: "",
+      financingMethod: "",
+      preferredProducts: "",
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -168,8 +219,8 @@ const IntakeForm: React.FC = () => {
           description: "Your intake form has been submitted.",
           variant: "default",
         });
-        // Reset form if needed
-        // setFormData({ ... }) // Reset to defaults
+        
+        resetForm();
       } else {
         throw new Error("Failed to submit form");
       }
