@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import Confetti from "react-confetti";
 import { 
   User, Phone, Mail, MapPin, Calendar, FileText, Home, Car, 
-  BatteryCharging, HelpCircle, DollarSign, PenTool, Send
+  BatteryCharging, HelpCircle, DollarSign, PenTool, Send,
+  PartyPopper
 } from "lucide-react";
 
 interface FormData {
@@ -99,6 +102,35 @@ const IntakeForm: React.FC = () => {
   };
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showConfetti, setShowConfetti] = useState<boolean>(false);
+  const [windowDimension, setWindowDimension] = useState<{width: number, height: number}>({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowDimension({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (showConfetti) {
+      // Hide confetti after 5 seconds
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -220,6 +252,9 @@ const IntakeForm: React.FC = () => {
           variant: "default",
         });
         
+        // Trigger confetti celebration
+        setShowConfetti(true);
+        
         resetForm();
       } else {
         throw new Error("Failed to submit form");
@@ -280,6 +315,14 @@ const IntakeForm: React.FC = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto py-8 px-4">
+      {showConfetti && (
+        <Confetti
+          width={windowDimension.width}
+          height={windowDimension.height}
+          recycle={false}
+          numberOfPieces={500}
+        />
+      )}
       <div className="tesla-form-container bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-xl">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white/90">
