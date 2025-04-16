@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -206,7 +207,9 @@ const IntakeForm: React.FC = () => {
     <div className="w-full max-w-5xl mx-auto py-8 px-4">
       <div className="tesla-form-container bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-xl">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Cobalt Power Solar Intake Form</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white/90">
+            Cobalt Power Solar Intake Form
+          </h1>
           <div className="w-40 h-20">
             <img 
               src="https://www.cobaltpower.com/images/logos/Transparent-Logo.2212160539550.png" 
