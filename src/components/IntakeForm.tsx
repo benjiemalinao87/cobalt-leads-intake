@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Confetti from "react-confetti";
@@ -7,6 +6,7 @@ import {
   BatteryCharging, HelpCircle, DollarSign, PenTool, Send,
   PartyPopper
 } from "lucide-react";
+import { supabase, findSalesRepForLead, logRouting } from "@/lib/supabase";
 
 interface FormData {
   firstName: string;
@@ -237,7 +237,78 @@ const IntakeForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://hkdk.events/peoqe7iqzgcxeh", {
+      // Find the appropriate sales rep for the lead based on city and lead source
+      const routingResult = await findSalesRepForLead({
+        city: formData.city,
+        leadSource: formData.leadSource,
+        leadStatus: formData.leadStatus
+      });
+
+      // Log the routing decision
+      await logRouting({
+        email: formData.email,
+        city: formData.city,
+        leadSource: formData.leadSource,
+        leadStatus: formData.leadStatus
+      }, routingResult);
+
+      // Prepare the data for Supabase
+      const leadData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        postal_code: formData.zip,
+        lead_source: formData.leadSource,
+        product_type: formData.productType,
+        created_by: formData.createdBy,
+        lead_status: formData.leadStatus,
+        date_created: formData.dateCreated,
+        assigned_to: formData.assignedTo,
+        assigned_sales_rep_id: routingResult.salesRepId,
+        avg_electric_bill: formData.avgElectricBill,
+        avg_kwh_consumption: formData.avgKwhConsumption,
+        has_ev: formData.hasEV,
+        interested_in_storage: formData.interestedInStorage,
+        goals: formData.goals,
+        notes: formData.notes,
+        has_hoa: formData.hasHOA,
+        job_type: formData.jobType,
+        construction_type: formData.constructionType,
+        installation_type: formData.installationType,
+        roof_type: formData.roofType,
+        primary_phone_type: formData.primaryPhoneType,
+        title_of_lead: formData.titleOfLead,
+        floor_count: formData.floorCount,
+        referral_source: formData.referralSource,
+        has_pool: formData.hasPool,
+        utility_provider: formData.utilityProvider,
+        has_bill: formData.hasBill,
+        roof_age: formData.roofAge,
+        roof_condition: formData.roofCondition,
+        roof_shade: formData.roofShade,
+        project_readiness: formData.projectReadiness,
+        referrals: formData.referrals,
+        financing_method: formData.financingMethod,
+        preferred_products: formData.preferredProducts,
+        routing_method: routingResult.routingMethod
+      };
+
+      // Save to Supabase
+      const { error: supabaseError } = await supabase
+        .from('leads')
+        .insert(leadData);
+
+      if (supabaseError) {
+        console.error("Supabase error:", supabaseError);
+        throw new Error("Failed to save lead to database");
+      }
+
+      // Continue with the original webhook submission
+      const webhookResponse = await fetch("https://hkdk.events/peoqe7iqzgcxeh", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -245,10 +316,21 @@ const IntakeForm: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
+      // Update the webhook_sent status in Supabase
+      if (webhookResponse.ok) {
+        await supabase
+          .from('leads')
+          .update({ webhook_sent: true })
+          .eq('email', formData.email)
+          .eq('date_created', formData.dateCreated);
+      }
+
+      if (webhookResponse.ok) {
         toast({
           title: "Form Submitted Successfully",
-          description: "Your intake form has been submitted.",
+          description: routingResult.salesRepId 
+            ? `Your intake form has been submitted and assigned to a sales rep.`
+            : "Your intake form has been submitted.",
           variant: "default",
         });
         
@@ -257,7 +339,7 @@ const IntakeForm: React.FC = () => {
         
         resetForm();
       } else {
-        throw new Error("Failed to submit form");
+        throw new Error("Failed to submit form to webhook");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
