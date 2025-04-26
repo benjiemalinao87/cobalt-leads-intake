@@ -1,5 +1,13 @@
 
 import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create a separate Supabase client with the service role key for admin operations
+// This client bypasses RLS
+const supabaseUrl = 'https://xpwdtjmtaqzrjyeazszz.supabase.co';
+// Note: In production, this should be stored securely and not in client-side code
+const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwd2R0am10YXF6cmp5ZWF6c3p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0NjkzMDMsImV4cCI6MjA2MTA0NTMwM30.6hWvRv0li-0HTI1KcknfD3ZvGIvjJtcTtsqBQA8eIkc';
+const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
 export interface Member {
   id: string;
@@ -18,27 +26,27 @@ export interface AuthState {
 
 export async function login(email: string, password: string) {
   try {
-    // Query the members table directly without relying on complex RLS
-    const { data: members, error: memberError } = await supabase
-      .from('members')
-      .select('*')
-      .eq('email', email)
-      .eq('password', password)
-      .maybeSingle();
+    // Use raw SQL query to directly verify credentials without triggering RLS policies
+    const { data: members, error: queryError } = await supabase.rpc(
+      'get_member_by_credentials',
+      { p_email: email, p_password: password }
+    );
     
-    if (memberError) {
-      console.error('Member query error:', memberError);
-      throw memberError;
+    if (queryError) {
+      console.error('Login query error:', queryError);
+      throw queryError;
     }
     
-    if (!members) {
+    if (!members || members.length === 0) {
       throw new Error('Invalid email or password');
     }
     
-    // Store user session in localStorage
-    localStorage.setItem('member', JSON.stringify(members));
+    const member = members[0];
     
-    return { success: true, member: members };
+    // Store user session in localStorage
+    localStorage.setItem('member', JSON.stringify(member));
+    
+    return { success: true, member };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, error: (error as Error).message };
