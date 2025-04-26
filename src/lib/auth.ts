@@ -77,7 +77,7 @@ export function useAuth(): AuthState {
   };
 }
 
-// Additional function to create a secure RPC function for members operations
+// Updated secure functions to use our new manage_members RPC function
 export async function createMemberSecure(memberData: {
   email: string;
   name: string;
@@ -85,11 +85,16 @@ export async function createMemberSecure(memberData: {
   role: string;
 }) {
   try {
-    // Direct insert with the new RLS policy should work
-    const { data, error } = await supabase
-      .from('members')
-      .insert([memberData])
-      .select();
+    const { data, error } = await supabase.rpc(
+      'manage_members',
+      {
+        p_operation: 'create',
+        p_email: memberData.email,
+        p_name: memberData.name,
+        p_password: memberData.password,
+        p_role: memberData.role
+      }
+    );
       
     if (error) throw error;
     return { success: true, member: data?.[0] || null };
@@ -108,11 +113,17 @@ export async function updateMemberSecure(
   updates: Partial<Omit<Member, 'id' | 'created_at' | 'updated_at'>>
 ) {
   try {
-    const { data, error } = await supabase
-      .from('members')
-      .update(updates)
-      .eq('id', id)
-      .select();
+    const { data, error } = await supabase.rpc(
+      'manage_members',
+      {
+        p_operation: 'update',
+        p_id: id,
+        p_email: updates.email,
+        p_name: updates.name,
+        p_password: updates.password,
+        p_role: updates.role
+      }
+    );
       
     if (error) throw error;
     return { success: true, member: data?.[0] || null };
@@ -128,10 +139,13 @@ export async function updateMemberSecure(
 // Function to delete a member securely
 export async function deleteMemberSecure(id: string) {
   try {
-    const { error } = await supabase
-      .from('members')
-      .delete()
-      .eq('id', id);
+    const { data, error } = await supabase.rpc(
+      'manage_members',
+      {
+        p_operation: 'delete',
+        p_id: id
+      }
+    );
       
     if (error) throw error;
     return { success: true };
@@ -140,6 +154,28 @@ export async function deleteMemberSecure(id: string) {
     return { 
       success: false, 
       error: (error as { message?: string })?.message || 'Failed to delete member' 
+    };
+  }
+}
+
+// Function to fetch all members securely
+export async function getAllMembersSecure() {
+  try {
+    const { data, error } = await supabase.rpc(
+      'manage_members',
+      {
+        p_operation: 'list'
+      }
+    );
+      
+    if (error) throw error;
+    return { success: true, members: data || [] };
+  } catch (error) {
+    console.error('Error fetching members:', error);
+    return { 
+      success: false, 
+      error: (error as { message?: string })?.message || 'Failed to fetch members',
+      members: []
     };
   }
 }

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/lib/supabase";
 import { 
   Card,
   CardContent,
@@ -55,7 +54,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Edit, Trash2, Plus, Lock } from "lucide-react";
-import { Member } from "@/lib/auth";
+import { 
+  Member, 
+  createMemberSecure, 
+  updateMemberSecure, 
+  deleteMemberSecure,
+  getAllMembersSecure 
+} from "@/lib/auth";
 
 const memberSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -101,18 +106,18 @@ const MembersManagement: React.FC = () => {
   const fetchMembers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const response = await getAllMembersSecure();
       
-      if (error) throw error;
-      setMembers(data || []);
+      if (!response.success) {
+        throw new Error(response.error);
+      }
+      
+      setMembers(response.members);
       
       if (isLoading) {
         toast({
           title: "Members loaded",
-          description: `Successfully loaded ${data?.length || 0} members`,
+          description: `Successfully loaded ${response.members?.length || 0} members`,
         });
       }
     } catch (error) {
@@ -133,14 +138,16 @@ const MembersManagement: React.FC = () => {
 
   const handleAddMember = async (data: MemberFormValues) => {
     try {
-      const { error } = await supabase.from('members').insert([{
+      const response = await createMemberSecure({
         email: data.email,
         name: data.name,
         password: data.password,
         role: data.role,
-      }]);
+      });
       
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error);
+      }
       
       toast({
         title: "Success",
@@ -164,16 +171,15 @@ const MembersManagement: React.FC = () => {
     if (!currentMember) return;
     
     try {
-      const { error } = await supabase
-        .from('members')
-        .update({
-          name: data.name,
-          email: data.email,
-          role: data.role,
-        })
-        .eq('id', currentMember.id);
+      const response = await updateMemberSecure(currentMember.id, {
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      });
       
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error);
+      }
       
       toast({
         title: "Success",
@@ -196,14 +202,13 @@ const MembersManagement: React.FC = () => {
     if (!currentMember) return;
     
     try {
-      const { error } = await supabase
-        .from('members')
-        .update({
-          password: data.password,
-        })
-        .eq('id', currentMember.id);
+      const response = await updateMemberSecure(currentMember.id, {
+        password: data.password,
+      });
       
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error);
+      }
       
       toast({
         title: "Success",
@@ -226,12 +231,11 @@ const MembersManagement: React.FC = () => {
     if (!currentMember) return;
     
     try {
-      const { error } = await supabase
-        .from('members')
-        .delete()
-        .eq('id', currentMember.id);
+      const response = await deleteMemberSecure(currentMember.id);
       
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error);
+      }
       
       toast({
         title: "Success",
