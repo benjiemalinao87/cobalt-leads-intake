@@ -238,8 +238,9 @@ const IntakeForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Prepare the data for Supabase
+      // Store the complete form data as JSONB
       const leadData = {
+        // Regular columns
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
@@ -254,32 +255,9 @@ const IntakeForm: React.FC = () => {
         lead_status: formData.leadStatus,
         date_created: formData.dateCreated,
         assigned_to: formData.assignedTo,
-        avg_electric_bill: formData.avgElectricBill,
-        avg_kwh_consumption: formData.avgKwhConsumption,
-        has_ev: formData.hasEV,
-        interested_in_storage: formData.interestedInStorage,
-        goals: formData.goals,
-        notes: formData.notes,
-        has_hoa: formData.hasHOA,
-        job_type: formData.jobType,
-        construction_type: formData.constructionType,
-        installation_type: formData.installationType,
-        roof_type: formData.roofType,
-        primary_phone_type: formData.primaryPhoneType,
-        title_of_lead: formData.titleOfLead,
-        floor_count: formData.floorCount,
-        referral_source: formData.referralSource,
-        has_pool: formData.hasPool,
-        utility_provider: formData.utilityProvider,
-        has_bill: formData.hasBill,
-        roof_age: formData.roofAge,
-        roof_condition: formData.roofCondition,
-        roof_shade: formData.roofShade,
-        project_readiness: formData.projectReadiness,
-        referrals: formData.referrals,
-        financing_method: formData.financingMethod,
-        preferred_products: formData.preferredProducts,
-        api_sent: false
+        api_sent: false,
+        // Store complete form data as JSONB
+        form_data: formData
       };
 
       // Save to Supabase
