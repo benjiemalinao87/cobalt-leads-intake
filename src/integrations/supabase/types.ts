@@ -397,7 +397,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_member_by_credentials: {
+        Args: { p_email: string; p_password: string }
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          password: string
+          role: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
