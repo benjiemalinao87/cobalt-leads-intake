@@ -6,6 +6,7 @@ export interface Member {
   email: string;
   name: string | null;
   role: string;
+  password?: string; // Add password as optional for type safety
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +86,7 @@ export async function createMemberSecure(memberData: {
   role: string;
 }) {
   try {
+    // Use properly typed parameters for manage_members
     const { data, error } = await supabase.rpc(
       'manage_members',
       {
@@ -110,7 +112,7 @@ export async function createMemberSecure(memberData: {
 // Function to update a member securely
 export async function updateMemberSecure(
   id: string, 
-  updates: Partial<Omit<Member, 'id' | 'created_at' | 'updated_at'>>
+  updates: Partial<Omit<Member, 'id' | 'created_at' | 'updated_at'> & { password?: string }>
 ) {
   try {
     const { data, error } = await supabase.rpc(
