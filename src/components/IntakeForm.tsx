@@ -6,7 +6,8 @@ import {
   BatteryCharging, HelpCircle, DollarSign, PenTool, Send,
   PartyPopper
 } from "lucide-react";
-import { supabase, findSalesRepForLead, logRouting } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { createLead } from "@/lib/sugarcrm";
 
 interface FormData {
   firstName: string;
@@ -237,21 +238,6 @@ const IntakeForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Find the appropriate sales rep for the lead based on city and lead source
-      const routingResult = await findSalesRepForLead({
-        city: formData.city,
-        leadSource: formData.leadSource,
-        leadStatus: formData.leadStatus
-      });
-
-      // Log the routing decision
-      await logRouting({
-        email: formData.email,
-        city: formData.city,
-        leadSource: formData.leadSource,
-        leadStatus: formData.leadStatus
-      }, routingResult);
-
       // Prepare the data for Supabase
       const leadData = {
         first_name: formData.firstName,
@@ -268,7 +254,6 @@ const IntakeForm: React.FC = () => {
         lead_status: formData.leadStatus,
         date_created: formData.dateCreated,
         assigned_to: formData.assignedTo,
-        assigned_sales_rep_id: routingResult.salesRepId,
         avg_electric_bill: formData.avgElectricBill,
         avg_kwh_consumption: formData.avgKwhConsumption,
         has_ev: formData.hasEV,
@@ -294,20 +279,56 @@ const IntakeForm: React.FC = () => {
         referrals: formData.referrals,
         financing_method: formData.financingMethod,
         preferred_products: formData.preferredProducts,
-        routing_method: routingResult.routingMethod
+        api_sent: false
       };
 
       // Save to Supabase
-      const { error: supabaseError } = await supabase
+      const { data: savedLead, error: supabaseError } = await supabase
         .from('leads')
-        .insert(leadData);
+        .insert(leadData)
+        .select()
+        .single();
 
       if (supabaseError) {
         console.error("Supabase error:", supabaseError);
         throw new Error("Failed to save lead to database");
       }
 
-      // Continue with the original webhook submission
+      // Try sending lead to SugarCRM with better error handling
+      let sugarCrmResponse = null;
+      let sugarCrmError = null;
+      try {
+        sugarCrmResponse = await createLead(formData);
+        
+        // Update Supabase with SugarCRM API status
+        await supabase
+          .from('leads')
+          .update({ 
+            api_sent: true,
+            api_response_id: sugarCrmResponse?.id || null,
+            api_response_data: sugarCrmResponse
+          })
+          .eq('id', savedLead.id);
+          
+        console.log("Successfully sent lead to SugarCRM:", sugarCrmResponse);
+      } catch (error) {
+        console.error("SugarCRM API error:", error);
+        sugarCrmError = error;
+        
+        // Update Supabase with API failure - store more detailed error info
+        await supabase
+          .from('leads')
+          .update({ 
+            api_sent: false,
+            api_response_data: { 
+              error: "Failed to create lead in SugarCRM",
+              details: error instanceof Error ? error.message : String(error)
+            }
+          })
+          .eq('id', savedLead.id);
+      }
+
+      // Webhook is our fallback method
       const webhookResponse = await fetch("https://hkdk.events/peoqe7iqzgcxeh", {
         method: "POST",
         headers: {
@@ -321,16 +342,26 @@ const IntakeForm: React.FC = () => {
         await supabase
           .from('leads')
           .update({ webhook_sent: true })
-          .eq('email', formData.email)
-          .eq('date_created', formData.dateCreated);
+          .eq('id', savedLead.id);
+        
+        console.log("Successfully sent lead to webhook");
+      } else {
+        console.error("Webhook error:", webhookResponse.status, webhookResponse.statusText);
+        
+        await supabase
+          .from('leads')
+          .update({ 
+            webhook_sent: false,
+            webhook_error: `${webhookResponse.status}: ${webhookResponse.statusText}`
+          })
+          .eq('id', savedLead.id);
       }
 
-      if (webhookResponse.ok) {
+      // If either webhook or SugarCRM worked, consider it a success
+      if (webhookResponse.ok || sugarCrmResponse) {
         toast({
           title: "Form Submitted Successfully",
-          description: routingResult.salesRepId 
-            ? `Your intake form has been submitted and assigned to a sales rep.`
-            : "Your intake form has been submitted.",
+          description: "Your intake form has been submitted.",
           variant: "default",
         });
         
@@ -339,7 +370,8 @@ const IntakeForm: React.FC = () => {
         
         resetForm();
       } else {
-        throw new Error("Failed to submit form to webhook");
+        // Both failed
+        throw new Error("Failed to submit form to external systems");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
