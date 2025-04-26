@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Tell Vite that axios is available as a global variable
+    'global.axios': 'window.axios',
+  },
   optimizeDeps: {
     include: ['axios'],
   },
@@ -26,8 +30,5 @@ export default defineConfig(({ mode }) => ({
     commonjsOptions: {
       include: [/node_modules/],
     },
-    rollupOptions: {
-      external: ['axios']
-    }
   },
 }));

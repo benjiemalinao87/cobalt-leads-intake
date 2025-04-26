@@ -1,5 +1,5 @@
-// Use dynamic import for axios to work with the external configuration
-import axios from 'axios';
+// Use our axios shim which handles both CDN and npm package scenarios
+import axiosShim from './axios-shim';
 
 // Different CORS proxy URL - this one works better with complex APIs
 const CORS_PROXY = 'https://corsproxy.io/?';
@@ -61,7 +61,7 @@ const getValidToken = async (): Promise<string> => {
   
   // Otherwise, get a new token
   try {
-    const response = await axios.post(
+    const response = await axiosShim.post(
       `${CORS_PROXY}${SUGAR_API_URL}/oauth2/token`, 
       {
         grant_type: "password",
@@ -92,7 +92,7 @@ const getValidToken = async (): Promise<string> => {
 const createLeadViaEdgeFunction = async (leadData: any): Promise<any> => {
   try {
     console.log('Attempting to create lead via Supabase Edge Function...');
-    const response = await axios.post(
+    const response = await axiosShim.post(
       SUPABASE_FUNCTION_URL,
       leadData,
       {
@@ -116,7 +116,7 @@ export const createLead = async (leadData: any): Promise<any> => {
     try {
       const token = await getValidToken();
       
-      const response = await axios.post(
+      const response = await axiosShim.post(
         `${CORS_PROXY}${SUGAR_API_URL}/Leads`, 
         {
           account_name: `${leadData.firstName} ${leadData.lastName}`,
