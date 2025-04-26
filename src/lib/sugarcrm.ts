@@ -1,3 +1,4 @@
+// Use dynamic import for axios to work with the external configuration
 import axios from 'axios';
 
 // Different CORS proxy URL - this one works better with complex APIs

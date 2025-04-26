@@ -27,11 +27,7 @@ export default defineConfig(({ mode }) => ({
       include: [/node_modules/],
     },
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'axios']
-        }
-      }
+      external: ['axios']
     }
   },
 }));
