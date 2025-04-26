@@ -125,7 +125,6 @@ const IntakeForm: React.FC = () => {
 
   useEffect(() => {
     if (showConfetti) {
-      // Hide confetti after 5 seconds
       const timer = setTimeout(() => {
         setShowConfetti(false);
       }, 5000);
@@ -238,9 +237,7 @@ const IntakeForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Store the complete form data as JSONB
       const leadData = {
-        // Regular columns
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
@@ -256,11 +253,34 @@ const IntakeForm: React.FC = () => {
         date_created: formData.dateCreated,
         assigned_to: formData.assignedTo,
         api_sent: false,
-        // Store complete form data as JSONB
+        avg_electric_bill: formData.avgElectricBill,
+        avg_kwh_consumption: formData.avgKwhConsumption,
+        has_ev: formData.hasEV,
+        interested_in_storage: formData.interestedInStorage,
+        goals: formData.goals,
+        notes: formData.notes,
+        has_hoa: formData.hasHOA,
+        job_type: formData.jobType,
+        construction_type: formData.constructionType,
+        installation_type: formData.installationType,
+        roof_type: formData.roofType,
+        primary_phone_type: formData.primaryPhoneType,
+        title_of_lead: formData.titleOfLead,
+        floor_count: formData.floorCount,
+        referral_source: formData.referralSource,
+        has_pool: formData.hasPool,
+        utility_provider: formData.utilityProvider,
+        has_bill: formData.hasBill,
+        roof_age: formData.roofAge,
+        roof_condition: formData.roofCondition,
+        roof_shade: formData.roofShade,
+        project_readiness: formData.projectReadiness,
+        referrals: formData.referrals,
+        financing_method: formData.financingMethod,
+        preferred_products: formData.preferredProducts,
         form_data: formData
       };
 
-      // Save to Supabase
       const { data: savedLead, error: supabaseError } = await supabase
         .from('leads')
         .insert(leadData)
@@ -272,13 +292,11 @@ const IntakeForm: React.FC = () => {
         throw new Error("Failed to save lead to database");
       }
 
-      // Try sending lead to SugarCRM with better error handling
       let sugarCrmResponse = null;
       let sugarCrmError = null;
       try {
         sugarCrmResponse = await createLead(formData);
         
-        // Update Supabase with SugarCRM API status
         await supabase
           .from('leads')
           .update({ 
@@ -293,7 +311,6 @@ const IntakeForm: React.FC = () => {
         console.error("SugarCRM API error:", error);
         sugarCrmError = error;
         
-        // Update Supabase with API failure - store more detailed error info
         await supabase
           .from('leads')
           .update({ 
@@ -306,7 +323,6 @@ const IntakeForm: React.FC = () => {
           .eq('id', savedLead.id);
       }
 
-      // Webhook is our fallback method
       const webhookResponse = await fetch("https://hkdk.events/peoqe7iqzgcxeh", {
         method: "POST",
         headers: {
@@ -315,7 +331,6 @@ const IntakeForm: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
-      // Update the webhook_sent status in Supabase
       if (webhookResponse.ok) {
         await supabase
           .from('leads')
@@ -335,7 +350,6 @@ const IntakeForm: React.FC = () => {
           .eq('id', savedLead.id);
       }
 
-      // If either webhook or SugarCRM worked, consider it a success
       if (webhookResponse.ok || sugarCrmResponse) {
         toast({
           title: "Form Submitted Successfully",
@@ -343,12 +357,10 @@ const IntakeForm: React.FC = () => {
           variant: "default",
         });
         
-        // Trigger confetti celebration
         setShowConfetti(true);
         
         resetForm();
       } else {
-        // Both failed
         throw new Error("Failed to submit form to external systems");
       }
     } catch (error) {
