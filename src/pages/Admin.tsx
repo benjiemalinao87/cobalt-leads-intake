@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import MembersManagement from "@/components/admin/MembersManagement";
+import LeadDetails, { Lead } from "@/components/admin/LeadDetails";
 import { 
   Table,
   TableBody,
@@ -28,7 +29,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, RefreshCw, Settings, BarChart, PieChart } from "lucide-react";
+import { 
+  Search, 
+  RefreshCw, 
+  Settings, 
+  BarChart, 
+  PieChart, 
+  Filter, 
+  ChevronRight, 
+  Eye,
+  Activity,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -46,8 +57,10 @@ import {
 } from "@/components/ui/tabs";
 import {
   BarChart as RechartsBarChart,
+  LineChart as RechartsLineChart,
   PieChart as RechartsPieChart,
   Bar,
+  Line,
   Pie,
   XAxis,
   YAxis,
@@ -59,6 +72,16 @@ import {
 } from 'recharts';
 import { supabase } from "@/lib/supabase";
 import { getCurrentMember, isAdmin } from "@/lib/auth";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { addMonths, addYears, isAfter, format } from "date-fns";
 
 interface Lead {
   id: string;
@@ -120,20 +143,25 @@ const AdminPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [timeFrame, setTimeFrame] = useState<string>("day");
+  const [timeRange, setTimeRange] = useState<string>("all");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize] = useState<number>(10);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     phone: true,
     email: true,
-    address: true,
+    address: false, // Hide by default to make table more compact
     city: true,
-    state: true,
-    postalCode: true,
+    state: false, // Hide by default to make table more compact
+    postalCode: false, // Hide by default to make table more compact
     leadSource: true,
     productType: true,
-    createdBy: true,
+    createdBy: false, // Hide by default to make table more compact
     leadStatus: true,
     dateCreated: true,
     assignedTo: true,
-    routingMethod: true,
+    routingMethod: false, // Hide by default to make table more compact
     webhookStatus: true,
   });
 
@@ -273,7 +301,36 @@ const AdminPage: React.FC = () => {
   const getTimeSeriesData = (): TimeSeriesData[] => {
     const dataMap = new Map<string, number>();
     
-    const sortedLeads = [...leads].sort((a, b) => 
+    // Filter leads based on selected time range
+    const now = new Date();
+    let filteredByTimeRange = [...leads];
+    
+    if (timeRange !== 'all') {
+      let cutoffDate: Date;
+      
+      switch (timeRange) {
+        case '3months':
+          cutoffDate = addMonths(now, -3);
+          break;
+        case '6months':
+          cutoffDate = addMonths(now, -6);
+          break;
+        case '1year':
+          cutoffDate = addYears(now, -1);
+          break;
+        case '2years':
+          cutoffDate = addYears(now, -2);
+          break;
+        default:
+          cutoffDate = new Date(0); // Beginning of time
+      }
+      
+      filteredByTimeRange = leads.filter(lead => 
+        isAfter(new Date(lead.date_created), cutoffDate)
+      );
+    }
+    
+    const sortedLeads = [...filteredByTimeRange].sort((a, b) => 
       new Date(a.date_created).getTime() - new Date(b.date_created).getTime()
     );
     
@@ -291,6 +348,86 @@ const AdminPage: React.FC = () => {
   };
 
   const timeSeriesData = getTimeSeriesData();
+
+  // Add function to calculate cumulative lead data
+  const getCumulativeLeadsData = (): { date: string; count: number, cumulative: number }[] => {
+    // Start with regular time series data
+    const timeData = getTimeSeriesData();
+    
+    // Sort chronologically to ensure proper cumulative calculation
+    const sortedData = [...timeData].sort((a, b) => {
+      // Extract date parts for proper comparison
+      const dateA = a.date.includes('Week of') 
+        ? a.date.replace('Week of ', '')
+        : a.date;
+      const dateB = b.date.includes('Week of') 
+        ? b.date.replace('Week of ', '')
+        : b.date;
+      
+      const [monthA, dayOrYearA] = dateA.split('/');
+      const [monthB, dayOrYearB] = dateB.split('/');
+      
+      // Handle different formats based on timeFrame
+      if (timeFrame === 'month') {
+        // For months, compare year then month
+        const yearA = parseInt(dayOrYearA);
+        const yearB = parseInt(dayOrYearB);
+        if (yearA !== yearB) return yearA - yearB;
+        return parseInt(monthA) - parseInt(monthB);
+      } else {
+        // For days or weeks, simple string comparison usually works
+        return dateA.localeCompare(dateB);
+      }
+    });
+    
+    // Calculate cumulative values
+    let cumulative = 0;
+    return sortedData.map(item => {
+      cumulative += item.count;
+      return {
+        ...item,
+        cumulative
+      };
+    });
+  };
+
+  // Calculate the cumulative data
+  const cumulativeData = getCumulativeLeadsData();
+
+  // Function to handle row click
+  const handleRowClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDetailsOpen(true);
+  };
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredLeads.length / pageSize);
+  const paginatedLeads = filteredLeads.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Add pagination handlers
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 dark:from-gray-900 dark:to-gray-950 relative">
@@ -314,7 +451,7 @@ const AdminPage: React.FC = () => {
           
           <TabsContent value="leads">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle>Lead Management</CardTitle>
                 <CardDescription>
                   View and manage all lead entries in the system.
@@ -481,57 +618,77 @@ const AdminPage: React.FC = () => {
                     <TableCaption>
                       {isLoading 
                         ? "Loading leads..."
-                        : `Showing ${filteredLeads.length} of ${leads.length} leads`
+                        : `Showing ${paginatedLeads.length} of ${filteredLeads.length} leads`
                       }
                     </TableCaption>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="w-[200px]">Name</TableHead>
                         {columnVisibility.phone && <TableHead>Phone</TableHead>}
                         {columnVisibility.email && <TableHead>Email</TableHead>}
                         {columnVisibility.address && <TableHead>Address</TableHead>}
                         {columnVisibility.city && <TableHead>City</TableHead>}
                         {columnVisibility.state && <TableHead>State</TableHead>}
                         {columnVisibility.postalCode && <TableHead>Postal Code</TableHead>}
-                        {columnVisibility.leadSource && <TableHead>Lead Source</TableHead>}
-                        {columnVisibility.productType && <TableHead>Product Type</TableHead>}
+                        {columnVisibility.leadSource && <TableHead>Source</TableHead>}
+                        {columnVisibility.productType && <TableHead>Product</TableHead>}
                         {columnVisibility.createdBy && <TableHead>Created By</TableHead>}
-                        {columnVisibility.leadStatus && <TableHead>Lead Status</TableHead>}
-                        {columnVisibility.dateCreated && <TableHead>Date Created</TableHead>}
+                        {columnVisibility.leadStatus && <TableHead>Status</TableHead>}
+                        {columnVisibility.dateCreated && <TableHead>Date</TableHead>}
                         {columnVisibility.assignedTo && <TableHead>Assigned To</TableHead>}
-                        {columnVisibility.routingMethod && <TableHead>Routing Method</TableHead>}
-                        {columnVisibility.webhookStatus && <TableHead>Webhook Sent</TableHead>}
+                        {columnVisibility.routingMethod && <TableHead>Routing</TableHead>}
+                        {columnVisibility.webhookStatus && <TableHead>Webhook</TableHead>}
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={visibleColumnCount + 1} className="text-center py-8">
-                            Loading lead data...
+                          <TableCell colSpan={visibleColumnCount + 2} className="text-center py-8">
+                            <div className="flex justify-center items-center">
+                              <RefreshCw className="mr-2 h-5 w-5 animate-spin text-muted-foreground" />
+                              <span>Loading lead data...</span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : filteredLeads.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={visibleColumnCount + 1} className="text-center py-8">
-                            No leads found matching your search criteria.
+                          <TableCell colSpan={visibleColumnCount + 2} className="text-center py-8">
+                            <div className="flex flex-col items-center justify-center text-center">
+                              <Filter className="h-8 w-8 mb-2 text-muted-foreground" />
+                              <h3 className="font-semibold text-lg">No leads found</h3>
+                              <p className="text-muted-foreground text-sm">
+                                Try adjusting your search or filter to find what you're looking for.
+                              </p>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredLeads.map((lead) => (
-                          <TableRow key={lead.id}>
-                            <TableCell>{`${lead.first_name} ${lead.last_name}`}</TableCell>
+                        paginatedLeads.map((lead) => (
+                          <TableRow 
+                            key={lead.id} 
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => handleRowClick(lead)}
+                          >
+                            <TableCell className="font-medium">
+                              {`${lead.first_name} ${lead.last_name}`}
+                            </TableCell>
                             {columnVisibility.phone && <TableCell>{lead.phone}</TableCell>}
                             {columnVisibility.email && <TableCell>{lead.email}</TableCell>}
                             {columnVisibility.address && <TableCell>{lead.address}</TableCell>}
                             {columnVisibility.city && <TableCell>{lead.city}</TableCell>}
                             {columnVisibility.state && <TableCell>{lead.state}</TableCell>}
                             {columnVisibility.postalCode && <TableCell>{lead.postal_code}</TableCell>}
-                            {columnVisibility.leadSource && <TableCell>{lead.lead_source}</TableCell>}
-                            {columnVisibility.productType && <TableCell>{lead.product_type}</TableCell>}
+                            {columnVisibility.leadSource && (
+                              <TableCell>{lead.lead_source}</TableCell>
+                            )}
+                            {columnVisibility.productType && (
+                              <TableCell>{lead.product_type}</TableCell>
+                            )}
                             {columnVisibility.createdBy && <TableCell>{lead.created_by}</TableCell>}
                             {columnVisibility.leadStatus && (
                               <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block
                                   ${lead.lead_status === 'New' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : ''}
                                   ${lead.lead_status === 'Contacted' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : ''}
                                   ${lead.lead_status === 'Qualified' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : ''}
@@ -543,8 +700,12 @@ const AdminPage: React.FC = () => {
                                 </span>
                               </TableCell>
                             )}
-                            {columnVisibility.dateCreated && <TableCell>{formatDate(lead.date_created)}</TableCell>}
-                            {columnVisibility.assignedTo && <TableCell>{lead.assigned_to}</TableCell>}
+                            {columnVisibility.dateCreated && (
+                              <TableCell>{new Date(lead.date_created).toLocaleDateString()}</TableCell>
+                            )}
+                            {columnVisibility.assignedTo && (
+                              <TableCell>{lead.assigned_to}</TableCell>
+                            )}
                             {columnVisibility.routingMethod && (
                               <TableCell>
                                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
@@ -563,12 +724,102 @@ const AdminPage: React.FC = () => {
                                 </span>
                               </TableCell>
                             )}
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8" 
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent row click
+                                  handleRowClick(lead);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">View details</span>
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Add pagination controls */}
+                {filteredLeads.length > 0 && (
+                  <div className="mt-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={handlePreviousPage} 
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {/* Generate page numbers */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          // Show first page, last page, current page, and pages around current
+                          let pageNum: number | null = null;
+                          
+                          if (totalPages <= 5) {
+                            // If 5 or fewer pages, show all page numbers
+                            pageNum = i + 1;
+                          } else if (i === 0) {
+                            // First button is always page 1
+                            pageNum = 1;
+                          } else if (i === 4) {
+                            // Last button is always the last page
+                            pageNum = totalPages;
+                          } else if (currentPage <= 2) {
+                            // Near the start
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 1) {
+                            // Near the end
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            // In the middle
+                            pageNum = currentPage - 1 + i;
+                          }
+                          
+                          // Skip rendering if we need an ellipsis instead
+                          if (
+                            (pageNum > 2 && pageNum < currentPage - 1) || 
+                            (pageNum > currentPage + 1 && pageNum < totalPages - 1)
+                          ) {
+                            if (i === 2) {
+                              return (
+                                <PaginationItem key={`ellipsis-${i}`}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            return null;
+                          }
+                          
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                isActive={currentPage === pageNum}
+                                onClick={() => handlePageChange(pageNum!)}
+                                className="cursor-pointer"
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }).filter(Boolean)}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={handleNextPage} 
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -642,28 +893,68 @@ const AdminPage: React.FC = () => {
                   <CardDescription>
                     Number of new leads created by time period
                   </CardDescription>
-                  <div className="mt-2 flex space-x-2">
-                    <Button 
-                      variant={timeFrame === 'day' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTimeFrame('day')}
-                    >
-                      Daily
-                    </Button>
-                    <Button 
-                      variant={timeFrame === 'week' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTimeFrame('week')}
-                    >
-                      Weekly
-                    </Button>
-                    <Button 
-                      variant={timeFrame === 'month' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTimeFrame('month')}
-                    >
-                      Monthly
-                    </Button>
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <Button 
+                        variant={timeFrame === 'day' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeFrame('day')}
+                      >
+                        Daily
+                      </Button>
+                      <Button 
+                        variant={timeFrame === 'week' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeFrame('week')}
+                      >
+                        Weekly
+                      </Button>
+                      <Button 
+                        variant={timeFrame === 'month' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeFrame('month')}
+                      >
+                        Monthly
+                      </Button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant={timeRange === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeRange('all')}
+                      >
+                        All Time
+                      </Button>
+                      <Button 
+                        variant={timeRange === '3months' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeRange('3months')}
+                      >
+                        Last 3 Months
+                      </Button>
+                      <Button 
+                        variant={timeRange === '6months' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeRange('6months')}
+                      >
+                        Last 6 Months
+                      </Button>
+                      <Button 
+                        variant={timeRange === '1year' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeRange('1year')}
+                      >
+                        Last Year
+                      </Button>
+                      <Button 
+                        variant={timeRange === '2years' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeRange('2years')}
+                      >
+                        Last 2 Years
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -701,8 +992,89 @@ const AdminPage: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Add new Line Chart */}
+            <div className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Activity className="h-5 w-5 mr-2" />
+                    Lead Growth Trends
+                  </CardTitle>
+                  <CardDescription>
+                    Cumulative lead growth over time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart
+                        data={cumulativeData}
+                        margin={{
+                          top: 5,
+                          right: 30,
+                          left: 20,
+                          bottom: 60,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          angle={-45} 
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis 
+                          yAxisId="left"
+                          orientation="left"
+                          stroke="#8884d8"
+                          allowDecimals={false}
+                        />
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          stroke="#82ca9d"
+                          allowDecimals={false}
+                        />
+                        <RechartsTooltip 
+                          formatter={(value, name) => {
+                            if (name === "New Leads") return [`${value} leads`, name];
+                            return [`${value} total leads`, name];
+                          }}
+                        />
+                        <Legend />
+                        <Line
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="count"
+                          name="New Leads"
+                          stroke="#8884d8"
+                          activeDot={{ r: 8 }}
+                          strokeWidth={2}
+                        />
+                        <Line 
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="cumulative"
+                          name="Cumulative Total"
+                          stroke="#82ca9d"
+                          strokeWidth={2}
+                        />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
+
+        {/* Lead details dialog */}
+        <LeadDetails 
+          lead={selectedLead} 
+          open={detailsOpen} 
+          onOpenChange={setDetailsOpen} 
+        />
       </div>
     </div>
   );
