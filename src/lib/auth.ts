@@ -87,8 +87,8 @@ export async function createMemberSecure(memberData: {
 }) {
   try {
     // Use properly typed parameters for manage_members
-    const { data, error } = await supabase.rpc(
-      'manage_members',
+    const { data, error } = await supabase.rpc<Member[]>(
+      'manage_members' as any,
       {
         p_operation: 'create',
         p_email: memberData.email,
@@ -115,8 +115,8 @@ export async function updateMemberSecure(
   updates: Partial<Omit<Member, 'id' | 'created_at' | 'updated_at'> & { password?: string }>
 ) {
   try {
-    const { data, error } = await supabase.rpc(
-      'manage_members',
+    const { data, error } = await supabase.rpc<Member[]>(
+      'manage_members' as any,
       {
         p_operation: 'update',
         p_id: id,
@@ -141,8 +141,8 @@ export async function updateMemberSecure(
 // Function to delete a member securely
 export async function deleteMemberSecure(id: string) {
   try {
-    const { data, error } = await supabase.rpc(
-      'manage_members',
+    const { data, error } = await supabase.rpc<Member[]>(
+      'manage_members' as any,
       {
         p_operation: 'delete',
         p_id: id
@@ -163,8 +163,8 @@ export async function deleteMemberSecure(id: string) {
 // Function to fetch all members securely
 export async function getAllMembersSecure() {
   try {
-    const { data, error } = await supabase.rpc(
-      'manage_members',
+    const { data, error } = await supabase.rpc<Member[]>(
+      'manage_members' as any,
       {
         p_operation: 'list'
       }
