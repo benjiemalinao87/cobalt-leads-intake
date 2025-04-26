@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -13,12 +13,27 @@ import { getCurrentMember } from "./lib/auth";
 
 const queryClient = new QueryClient();
 
-// Simple authentication guard component
+// Enhanced authentication guard component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const member = getCurrentMember();
+  const location = useLocation();
   
   if (!member) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login while saving the attempted URL
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Auth guard for the login page to prevent authenticated users from accessing it
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const member = getCurrentMember();
+  const location = useLocation();
+  
+  if (member) {
+    // Redirect to the page they came from or default to admin
+    return <Navigate to={(location.state?.from?.pathname) || "/admin"} replace />;
   }
   
   return <>{children}</>;
@@ -33,7 +48,14 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/login" 
+              element={
+                <AuthRoute>
+                  <Login />
+                </AuthRoute>
+              } 
+            />
             <Route 
               path="/admin" 
               element={
@@ -42,7 +64,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
