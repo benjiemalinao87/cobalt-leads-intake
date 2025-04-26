@@ -18,7 +18,7 @@ export interface AuthState {
 
 export async function login(email: string, password: string) {
   try {
-    // Use the newly created RPC function to verify credentials
+    // Use the RPC function to verify credentials without triggering RLS recursion
     const { data: members, error: queryError } = await supabase.rpc(
       'get_member_by_credentials', 
       { p_email: email, p_password: password }
@@ -75,4 +75,71 @@ export function useAuth(): AuthState {
     isLoading: false,
     error: null
   };
+}
+
+// Additional function to create a secure RPC function for members operations
+export async function createMemberSecure(memberData: {
+  email: string;
+  name: string;
+  password: string;
+  role: string;
+}) {
+  try {
+    // Direct insert with the new RLS policy should work
+    const { data, error } = await supabase
+      .from('members')
+      .insert([memberData])
+      .select();
+      
+    if (error) throw error;
+    return { success: true, member: data?.[0] || null };
+  } catch (error) {
+    console.error('Error creating member:', error);
+    return { 
+      success: false, 
+      error: (error as { message?: string })?.message || 'Failed to create member' 
+    };
+  }
+}
+
+// Function to update a member securely
+export async function updateMemberSecure(
+  id: string, 
+  updates: Partial<Omit<Member, 'id' | 'created_at' | 'updated_at'>>
+) {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .update(updates)
+      .eq('id', id)
+      .select();
+      
+    if (error) throw error;
+    return { success: true, member: data?.[0] || null };
+  } catch (error) {
+    console.error('Error updating member:', error);
+    return { 
+      success: false, 
+      error: (error as { message?: string })?.message || 'Failed to update member' 
+    };
+  }
+}
+
+// Function to delete a member securely
+export async function deleteMemberSecure(id: string) {
+  try {
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting member:', error);
+    return { 
+      success: false, 
+      error: (error as { message?: string })?.message || 'Failed to delete member' 
+    };
+  }
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -109,6 +108,13 @@ const MembersManagement: React.FC = () => {
       
       if (error) throw error;
       setMembers(data || []);
+      
+      if (isLoading) {
+        toast({
+          title: "Members loaded",
+          description: `Successfully loaded ${data?.length || 0} members`,
+        });
+      }
     } catch (error) {
       console.error('Error fetching members:', error);
       toast({
@@ -127,14 +133,12 @@ const MembersManagement: React.FC = () => {
 
   const handleAddMember = async (data: MemberFormValues) => {
     try {
-      const { error } = await supabase.from('members').insert([
-        {
-          email: data.email,
-          name: data.name,
-          password: data.password,
-          role: data.role,
-        }
-      ]);
+      const { error } = await supabase.from('members').insert([{
+        email: data.email,
+        name: data.name,
+        password: data.password,
+        role: data.role,
+      }]);
       
       if (error) throw error;
       
@@ -360,7 +364,6 @@ const MembersManagement: React.FC = () => {
         </div>
       </CardContent>
 
-      {/* Add Member Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -449,7 +452,6 @@ const MembersManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Member Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -525,7 +527,6 @@ const MembersManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Change Password Dialog */}
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -564,7 +565,6 @@ const MembersManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
