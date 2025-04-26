@@ -112,12 +112,12 @@ const MembersManagement: React.FC = () => {
         throw new Error(response.error);
       }
       
-      setMembers(response.members);
+      setMembers(response.members as Member[]);
       
       if (isLoading) {
         toast({
           title: "Members loaded",
-          description: `Successfully loaded ${response.members?.length || 0} members`,
+          description: `Successfully loaded ${(response.members as Member[])?.length || 0} members`,
         });
       }
     } catch (error) {

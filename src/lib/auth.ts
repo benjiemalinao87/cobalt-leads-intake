@@ -106,6 +106,9 @@ interface ListMembersParams {
   p_operation: string;
 }
 
+// Specify the RPC function name type
+type RpcFunctionName = 'get_member_by_credentials' | 'manage_members';
+
 // Updated secure functions to use our new manage_members RPC function
 export async function createMemberSecure(memberData: {
   email: string;
@@ -114,9 +117,9 @@ export async function createMemberSecure(memberData: {
   role: string;
 }) {
   try {
-    // Use properly typed parameters for manage_members with both type arguments
+    // Fix the typing of the RPC call
     const { data, error } = await supabase.rpc<Member[], CreateMemberParams>(
-      'manage_members' as any,
+      'manage_members' as RpcFunctionName,
       {
         p_operation: 'create',
         p_email: memberData.email,
@@ -144,7 +147,7 @@ export async function updateMemberSecure(
 ) {
   try {
     const { data, error } = await supabase.rpc<Member[], UpdateMemberParams>(
-      'manage_members' as any,
+      'manage_members' as RpcFunctionName,
       {
         p_operation: 'update',
         p_id: id,
@@ -170,7 +173,7 @@ export async function updateMemberSecure(
 export async function deleteMemberSecure(id: string) {
   try {
     const { data, error } = await supabase.rpc<Member[], DeleteMemberParams>(
-      'manage_members' as any,
+      'manage_members' as RpcFunctionName,
       {
         p_operation: 'delete',
         p_id: id
@@ -192,7 +195,7 @@ export async function deleteMemberSecure(id: string) {
 export async function getAllMembersSecure() {
   try {
     const { data, error } = await supabase.rpc<Member[], ListMembersParams>(
-      'manage_members' as any,
+      'manage_members' as RpcFunctionName,
       {
         p_operation: 'list'
       }
