@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import MembersManagement from "@/components/admin/MembersManagement";
 import { 
   Table,
   TableBody,
@@ -56,6 +58,7 @@ import {
   Cell,
 } from 'recharts';
 import { supabase } from "@/lib/supabase";
+import { getCurrentMember, isAdmin } from "@/lib/auth";
 
 interface Lead {
   id: string;
@@ -134,10 +137,15 @@ const AdminPage: React.FC = () => {
     webhookStatus: true,
   });
 
+  const member = getCurrentMember();
+  
+  if (!member) {
+    return <Navigate to="/login" replace />;
+  }
+
   const fetchLeads = async () => {
     setIsLoading(true);
     try {
-      // Fetch leads from Supabase
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -220,20 +228,17 @@ const AdminPage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  // Count visible columns
   const visibleColumnCount = Object.values(columnVisibility).filter(Boolean).length;
 
-  // Analytics data preparation
   const statusColors = {
-    'New': '#3b82f6', // blue
-    'Contacted': '#f59e0b', // amber
-    'Qualified': '#10b981', // green
-    'Proposal': '#8b5cf6', // purple
-    'Closed Won': '#059669', // emerald
-    'Closed Lost': '#ef4444', // red
+    'New': '#3b82f6',
+    'Contacted': '#f59e0b',
+    'Qualified': '#10b981',
+    'Proposal': '#8b5cf6',
+    'Closed Won': '#059669',
+    'Closed Lost': '#ef4444',
   };
 
-  // Calculate lead status distribution
   const statusCounts: StatusCount[] = leads.reduce((acc: StatusCount[], lead) => {
     const existingStatus = acc.find(item => item.name === lead.lead_status);
     
@@ -250,13 +255,11 @@ const AdminPage: React.FC = () => {
     return acc;
   }, []);
 
-  // Format date based on selected time frame (day, week, month)
   const formatTimeFrameDate = (date: Date): string => {
     switch (timeFrame) {
       case 'day':
         return `${date.getMonth() + 1}/${date.getDate()}`;
       case 'week':
-        // Get start of week (Sunday)
         const startOfWeek = new Date(date);
         startOfWeek.setDate(date.getDate() - date.getDay());
         return `Week of ${startOfWeek.getMonth() + 1}/${startOfWeek.getDate()}`;
@@ -267,16 +270,13 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  // Generate time series data for leads created over time
   const getTimeSeriesData = (): TimeSeriesData[] => {
     const dataMap = new Map<string, number>();
     
-    // Sort leads by date created
     const sortedLeads = [...leads].sort((a, b) => 
       new Date(a.date_created).getTime() - new Date(b.date_created).getTime()
     );
     
-    // Group by time frame
     sortedLeads.forEach(lead => {
       const date = new Date(lead.date_created);
       const formattedDate = formatTimeFrameDate(date);
@@ -284,7 +284,6 @@ const AdminPage: React.FC = () => {
       dataMap.set(formattedDate, (dataMap.get(formattedDate) || 0) + 1);
     });
     
-    // Convert map to array
     return Array.from(dataMap.entries()).map(([date, count]) => ({
       date,
       count
@@ -302,13 +301,14 @@ const AdminPage: React.FC = () => {
             Admin Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            View and manage all lead entries in the system.
+            View and manage all lead entries and system users.
           </p>
         </div>
 
         <Tabs defaultValue="leads" className="mb-6">
-          <TabsList className="grid w-full md:w-auto grid-cols-2">
+          <TabsList className="grid w-full md:w-auto grid-cols-3">
             <TabsTrigger value="leads">Lead Management</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
           
@@ -573,9 +573,28 @@ const AdminPage: React.FC = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="members">
+            {isAdmin() ? (
+              <MembersManagement />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Members Management</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-8 text-center">
+                    <p className="text-muted-foreground">
+                      You don't have permission to access this section. 
+                      Only administrators can manage members.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="analytics">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Lead Status Distribution */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -614,7 +633,6 @@ const AdminPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Leads Created Over Time */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -690,4 +708,4 @@ const AdminPage: React.FC = () => {
   );
 };
 
-export default AdminPage; 
+export default AdminPage;
