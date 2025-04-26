@@ -18,7 +18,7 @@ export interface AuthState {
 
 export async function login(email: string, password: string) {
   try {
-    // First check if the user exists in our members table
+    // Query the members table directly without relying on complex RLS
     const { data: members, error: memberError } = await supabase
       .from('members')
       .select('*')
@@ -26,11 +26,14 @@ export async function login(email: string, password: string) {
       .eq('password', password)
       .maybeSingle();
     
-    if (memberError) throw memberError;
-    if (!members) throw new Error('Invalid email or password');
+    if (memberError) {
+      console.error('Member query error:', memberError);
+      throw memberError;
+    }
     
-    // For a real app, you should use Supabase Auth instead of storing passwords in your table
-    // This is a simplified version for demo purposes
+    if (!members) {
+      throw new Error('Invalid email or password');
+    }
     
     // Store user session in localStorage
     localStorage.setItem('member', JSON.stringify(members));
