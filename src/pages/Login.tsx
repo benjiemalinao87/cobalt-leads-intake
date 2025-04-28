@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -122,7 +121,7 @@ const Login: React.FC = () => {
           </CardContent>
           <CardFooter className="flex justify-center border-t pt-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Default admin: admin@example.com / admin123
+              {/* Footer content can be added here if needed */}
             </p>
           </CardFooter>
         </Card>
