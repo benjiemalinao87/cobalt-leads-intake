@@ -443,4 +443,89 @@ const Navbar: React.FC = () => {
 - **Independent Pagination Logic**: Separated pagination logic from filtering logic to maintain clear separation of concerns.
 - **Reset Patterns**: Established clear rules for when pagination should reset to avoid user confusion.
 - **Feedback Clarity**: Updated table captions to clearly indicate which portion of the total results are being displayed.
-- **Maintainable Approach**: Implemented pagination in a way that doesn't require changing the core data structure, making it easier to maintain and extend. 
+- **Maintainable Approach**: Implemented pagination in a way that doesn't require changing the core data structure, making it easier to maintain and extend.
+
+## Dynamic Custom Fields with SugarCRM Mapping
+
+### Implementation Pattern
+- **Field Mapping Flexibility**: Implemented a system that allows users to add custom fields to the intake form on-the-fly and specify which SugarCRM fields they map to.
+- **Dynamic Form Structure**: Used React state to manage custom fields with their types, values, and SugarCRM field mappings.
+- **Modal Interface**: Created an intuitive modal interface for adding custom fields with options for different field types (text, number, select, checkbox, radio).
+
+### Benefits
+- **Adaptability**: The solution enables quick adaptation to changing business requirements without code changes.
+- **CRM Integration**: Direct mapping to SugarCRM fields ensures data consistency across systems.
+- **User Empowerment**: Form administrators can extend the form themselves without developer intervention.
+
+### Technical Implementation
+- **Custom Field Type**: Defined a comprehensive interface for custom fields that includes:
+  ```typescript
+  interface CustomField {
+    id: string;
+    label: string;
+    type: "text" | "number" | "select" | "checkbox" | "radio";
+    value: string;
+    sugarCrmField: string;
+    options?: string[];
+  }
+  ```
+- **Dynamic Rendering**: Implemented conditional rendering based on field type (text inputs, dropdowns, checkboxes, radio buttons).
+- **State Management**: Used React's useState for managing both the form's custom fields and the UI state for adding new fields.
+
+### Integration with SugarCRM
+- **Direct Field Mapping**: Each custom field includes a `sugarCrmField` property that specifies the exact SugarCRM API field name.
+- **Dynamic API Payload**: When submitting to SugarCRM, the system dynamically builds the payload by including all custom fields with their mapped field names.
+- **Storage**: Custom fields are stored in Supabase along with standard fields, preserving the complete form structure.
+
+### UI/UX Considerations
+- **Field Type Selection**: Provided appropriate input types for different data requirements (text, number, select, etc.).
+- **Field Removal**: Allowed for easy removal of custom fields with clear visual indicators.
+- **Field Mapping Display**: Showed the SugarCRM field mapping in the UI to maintain transparency.
+- **Validation**: Ensured proper validation for custom field entries before submission.
+
+### Lessons Learned
+- **Schema Flexibility**: Building a dynamic schema that accommodates custom fields allowed the form to grow organically with business needs.
+- **API Adaptability**: Systems that interact with external APIs (like SugarCRM) benefit from flexible field mapping rather than hardcoded structures.
+- **User Feedback**: Providing immediate visual feedback for custom field additions improved the user experience.
+- **Maintainability**: Despite adding complexity, the dynamic field system actually improved maintainability by reducing the need for code changes when form requirements evolve.
+
+### Future Considerations
+- **Field Templates**: Consider implementing saved templates for commonly used custom fields.
+- **Field Validation**: Add more sophisticated validation options for custom fields.
+- **Field Dependencies**: Implement conditional logic between custom fields (show/hide based on other field values).
+- **Persistence**: Save custom field configurations for reuse across multiple form submissions.
+- **Importing Existing Fields**: Add functionality to import field definitions directly from SugarCRM's schema.
+
+## Custom Fields in Form Submissions
+
+### UI Persistence for Custom Fields
+
+- **Problem**: After form submission, custom fields would disappear from the UI until page refresh, creating a poor user experience for agents.
+- **Root Cause**: The `resetForm()` function was clearing all custom fields, including persistent ones that should remain on the form after submission.
+- **Solution**: Modified the `resetForm()` function to preserve persistent custom fields after submission by:
+  1. Filtering out the persistent custom fields before reset
+  2. Restoring those fields with empty values after form submission
+  3. Maintaining field definitions and properties while only clearing entered values
+
+### Implementation:
+```typescript
+const resetForm = () => {
+  // Save the current custom fields that are persistent before resetting
+  const persistentCustomFields = formData.customFields.filter(field => field.isPersistent);
+  
+  setFormData({
+    // ... reset other form fields ...
+    
+    // Restore the persistent custom fields with empty values
+    customFields: persistentCustomFields.map(field => ({
+      ...field,
+      value: "" // Reset the value while keeping the field definition
+    })),
+  });
+};
+```
+
+### Lessons:
+- When implementing multi-session persistence features, consider the user experience across the entire form lifecycle (initialization, data entry, submission, reset)
+- Always preserve configuration data (like field definitions) after form submissions while only clearing user-entered values
+- For complex form states, handle each part of the state independently with clear separation between configuration and user data 

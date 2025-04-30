@@ -4,10 +4,20 @@ import Confetti from "react-confetti";
 import { 
   User, Phone, Mail, MapPin, Calendar, FileText, Home, Car, 
   BatteryCharging, HelpCircle, DollarSign, PenTool, Send,
-  PartyPopper
+  PartyPopper, Plus, X
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { createLead } from "@/lib/sugarcrm";
+
+interface CustomField {
+  id: string;
+  label: string;
+  type: "text" | "number" | "select" | "checkbox" | "radio";
+  value: string;
+  sugarCrmField: string;
+  options?: string[];
+  isPersistent?: boolean;
+}
 
 interface FormData {
   firstName: string;
@@ -49,6 +59,7 @@ interface FormData {
   referrals: string;
   financingMethod: string;
   preferredProducts: string;
+  customFields: CustomField[];
 }
 
 const IntakeForm: React.FC = () => {
@@ -93,7 +104,18 @@ const IntakeForm: React.FC = () => {
     referrals: "",
     financingMethod: "",
     preferredProducts: "",
+    customFields: [],
   });
+
+  const [showCustomFieldModal, setShowCustomFieldModal] = useState<boolean>(false);
+  const [newCustomField, setNewCustomField] = useState<Omit<CustomField, 'id'>>({
+    label: "",
+    type: "text",
+    value: "",
+    sugarCrmField: "",
+    options: [],
+  });
+  const [tempOption, setTempOption] = useState<string>("");
 
   const initialAutoFields = {
     createdBy: formData.createdBy,
@@ -131,6 +153,46 @@ const IntakeForm: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [showConfetti]);
+
+  // Load saved custom field definitions from Supabase
+  useEffect(() => {
+    const loadSavedCustomFields = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('custom_field_definitions')
+          .select('*');
+
+        if (error) {
+          console.error("Error loading custom fields:", error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Convert the data to match our CustomField interface
+          const savedFields: CustomField[] = data.map(field => ({
+            id: field.id,
+            label: field.label,
+            type: field.type,
+            sugarCrmField: field.sugar_crm_field,
+            options: field.options,
+            value: "", // Initialize with empty value
+            isPersistent: true // Mark as persistent
+          }));
+
+          // Add the saved fields to the form data
+          setFormData(prevData => ({
+            ...prevData,
+            customFields: savedFields
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading custom fields:", error);
+      }
+    };
+
+    // No need to create the table anymore since we've done it via migration
+    loadSavedCustomFields();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -189,6 +251,9 @@ const IntakeForm: React.FC = () => {
   };
 
   const resetForm = () => {
+    // Save the current custom fields that are persistent before resetting
+    const persistentCustomFields = formData.customFields.filter(field => field.isPersistent);
+    
     setFormData({
       firstName: "",
       lastName: "",
@@ -229,7 +294,182 @@ const IntakeForm: React.FC = () => {
       referrals: "",
       financingMethod: "",
       preferredProducts: "",
+      // Restore the persistent custom fields with empty values
+      customFields: persistentCustomFields.map(field => ({
+        ...field,
+        value: "" // Reset the value while keeping the field definition
+      })),
     });
+  };
+
+  const addCustomField = async () => {
+    if (!newCustomField.label || !newCustomField.sugarCrmField) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a field label and SugarCRM field mapping.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Start with loading state
+    setIsLoading(true);
+
+    try {
+      // Prepare the field data for saving
+      const fieldData = {
+        label: newCustomField.label,
+        type: newCustomField.type,
+        sugar_crm_field: newCustomField.sugarCrmField,
+        options: newCustomField.options && newCustomField.options.length > 0 
+          ? newCustomField.options 
+          : null // Use null instead of empty array to avoid DB issues
+      };
+
+      // First, save the field definition to Supabase
+      const { data: savedField, error } = await supabase
+        .from('custom_field_definitions')
+        .insert(fieldData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error saving custom field:", error);
+        
+        // Add the field to the form but mark it as non-persistent
+        const tempField: CustomField = {
+          ...newCustomField,
+          id: `custom-field-${Date.now()}`,
+          value: "",
+          isPersistent: false
+        };
+
+        setFormData((prevData) => ({
+          ...prevData,
+          customFields: [...prevData.customFields, tempField],
+        }));
+
+        toast({
+          title: "Error Saving Field",
+          description: "There was an error saving the custom field. It will be available for this session only.",
+          variant: "destructive",
+        });
+      } else {
+        // Add the saved field to the form
+        const newField: CustomField = {
+          id: savedField.id,
+          label: savedField.label,
+          type: savedField.type as "text" | "number" | "select" | "checkbox" | "radio",
+          sugarCrmField: savedField.sugar_crm_field,
+          options: savedField.options,
+          value: "",
+          isPersistent: true
+        };
+
+        setFormData((prevData) => ({
+          ...prevData,
+          customFields: [...prevData.customFields, newField],
+        }));
+
+        toast({
+          title: "Field Added",
+          description: "The custom field has been saved and will be available for future sessions.",
+          variant: "default",
+        });
+      }
+
+      // Reset the form for adding new fields
+      setNewCustomField({
+        label: "",
+        type: "text",
+        value: "",
+        sugarCrmField: "",
+        options: [],
+      });
+
+      setShowCustomFieldModal(false);
+    } catch (error) {
+      console.error("Error saving custom field:", error);
+      toast({
+        title: "Error Saving Field",
+        description: "There was an error saving the custom field.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeCustomField = async (id: string, isPersistent: boolean = false) => {
+    // Show loading state
+    setIsLoading(true);
+    
+    try {
+      // If the field is persistent, delete it from Supabase
+      if (isPersistent) {
+        const { error } = await supabase
+          .from('custom_field_definitions')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          console.error("Error deleting custom field:", error);
+          toast({
+            title: "Error Removing Field",
+            description: "The field was removed from the form but could not be deleted from the database.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Field Removed",
+            description: "The custom field has been removed permanently.",
+            variant: "default",
+          });
+        }
+      }
+
+      // Remove the field from the form data
+      setFormData((prevData) => ({
+        ...prevData,
+        customFields: prevData.customFields.filter((field) => field.id !== id),
+      }));
+    } catch (error) {
+      console.error("Error removing custom field:", error);
+      toast({
+        title: "Error",
+        description: "There was an error removing the field.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCustomFieldChange = (id: string, value: string) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      customFields: prevData.customFields.map((field) =>
+        field.id === id ? { ...field, value } : field
+      ),
+    }));
+  };
+
+  const addOption = () => {
+    if (!tempOption) return;
+    
+    setNewCustomField((prev) => ({
+      ...prev,
+      options: [...(prev.options || []), tempOption],
+    }));
+    
+    setTempOption("");
+  };
+
+  const removeOption = (optionToRemove: string) => {
+    setNewCustomField((prev) => ({
+      ...prev,
+      options: (prev.options || []).filter(option => option !== optionToRemove),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -237,6 +477,10 @@ const IntakeForm: React.FC = () => {
     setIsLoading(true);
 
     try {
+      // Create a copy of the custom fields for Supabase
+      const customFieldsForDB = [...formData.customFields];
+      
+      // Create the leadData object without adding the dynamic custom field properties
       const leadData = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -278,8 +522,18 @@ const IntakeForm: React.FC = () => {
         referrals: formData.referrals,
         financing_method: formData.financingMethod,
         preferred_products: formData.preferredProducts,
-        form_data: formData
+        form_data: formData,
+        custom_fields: customFieldsForDB  // Store the custom fields as an array in the custom_fields column
       };
+
+      // Create a separate object for SugarCRM and webhook with the custom fields added as properties
+      const sugarCrmData = { ...formData };
+      
+      // Add custom fields to the sugarCrmData object for SugarCRM API
+      formData.customFields.forEach(field => {
+        // @ts-ignore: Dynamic properties
+        sugarCrmData[field.sugarCrmField] = field.value;
+      });
 
       const { data: savedLead, error: supabaseError } = await supabase
         .from('leads')
@@ -295,7 +549,8 @@ const IntakeForm: React.FC = () => {
       let sugarCrmResponse = null;
       let sugarCrmError = null;
       try {
-        sugarCrmResponse = await createLead(formData);
+        // Pass the sugarCrmData instead of formData
+        sugarCrmResponse = await createLead(sugarCrmData);
         
         await supabase
           .from('leads')
@@ -323,12 +578,23 @@ const IntakeForm: React.FC = () => {
           .eq('id', savedLead.id);
       }
 
+      // Prepare webhook data - include standard form fields and custom fields
+      const webhookData = {
+        ...formData,
+        // Explicitly include a formatted version of custom fields for webhook consumers
+        customFieldsFormatted: formData.customFields.reduce((acc: Record<string, string>, field) => {
+          acc[field.sugarCrmField] = field.value;
+          return acc;
+        }, {})
+      };
+
+      // Send to webhook
       const webhookResponse = await fetch("https://hkdk.events/peoqe7iqzgcxeh", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(webhookData),
       });
 
       if (webhookResponse.ok) {
@@ -427,6 +693,129 @@ const IntakeForm: React.FC = () => {
           numberOfPieces={500}
         />
       )}
+      
+      {/* Custom Field Modal */}
+      {showCustomFieldModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Add Custom Field</h3>
+              <button 
+                onClick={() => setShowCustomFieldModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="tesla-label">Field Label</label>
+                <input
+                  type="text"
+                  value={newCustomField.label}
+                  onChange={(e) => setNewCustomField({...newCustomField, label: e.target.value})}
+                  className="tesla-input w-full"
+                  placeholder="e.g. Preferred Contact Time"
+                />
+              </div>
+              
+              <div>
+                <label className="tesla-label">SugarCRM Field Mapping</label>
+                <input
+                  type="text"
+                  value={newCustomField.sugarCrmField}
+                  onChange={(e) => setNewCustomField({...newCustomField, sugarCrmField: e.target.value})}
+                  className="tesla-input w-full"
+                  placeholder="e.g. preferred_contact_time_c"
+                />
+                <p className="text-xs text-gray-500 mt-1">The API field name in SugarCRM that this maps to</p>
+              </div>
+              
+              <div>
+                <label className="tesla-label">Field Type</label>
+                <select
+                  value={newCustomField.type}
+                  onChange={(e) => setNewCustomField({
+                    ...newCustomField, 
+                    type: e.target.value as "text" | "number" | "select" | "checkbox" | "radio"
+                  })}
+                  className="tesla-select w-full"
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="select">Dropdown</option>
+                  <option value="checkbox">Checkbox</option>
+                  <option value="radio">Radio Buttons</option>
+                </select>
+              </div>
+              
+              {(newCustomField.type === "select" || newCustomField.type === "radio") && (
+                <div>
+                  <label className="tesla-label">Options</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={tempOption}
+                      onChange={(e) => setTempOption(e.target.value)}
+                      className="tesla-input flex-1"
+                      placeholder="Add option"
+                    />
+                    <button
+                      type="button"
+                      onClick={addOption}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {newCustomField.options?.map((option, index) => (
+                      <div key={index} className="flex items-center bg-gray-100 rounded-full px-3 py-1">
+                        <span className="text-sm">{option}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeOption(option)}
+                          className="ml-1 text-gray-500 hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomFieldModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={addCustomField}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="animate-pulse">Saving...</span>
+                    </>
+                  ) : (
+                    <>Add Field</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="tesla-form-container bg-white/95 backdrop-blur-sm p-6 md:p-8 rounded-xl">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white/90">
@@ -1216,6 +1605,114 @@ const IntakeForm: React.FC = () => {
                 ></textarea>
               </div>
             </div>
+          </div>
+
+          {/* Custom Fields Section */}
+          {formData.customFields.length > 0 && (
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h2 className="section-title flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-tesla-blue-500" />
+                Custom Fields
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {formData.customFields.map((field) => (
+                  <div key={field.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => removeCustomField(field.id, field.isPersistent)}
+                      className="absolute right-0 top-0 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    
+                    <label className="tesla-label flex justify-between">
+                      <span>{field.label}</span>
+                      <div className="flex items-center gap-2">
+                        {field.isPersistent && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full">Saved</span>
+                        )}
+                        <span className="text-xs text-gray-500">({field.sugarCrmField})</span>
+                      </div>
+                    </label>
+                    
+                    {field.type === "text" && (
+                      <input
+                        type="text"
+                        value={field.value}
+                        onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                        className="tesla-input w-full"
+                      />
+                    )}
+                    
+                    {field.type === "number" && (
+                      <input
+                        type="number"
+                        value={field.value}
+                        onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                        className="tesla-input w-full"
+                      />
+                    )}
+                    
+                    {field.type === "select" && (
+                      <select
+                        value={field.value}
+                        onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                        className="tesla-select w-full"
+                      >
+                        <option value="">Select an option</option>
+                        {field.options?.map((option, index) => (
+                          <option key={index} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    
+                    {field.type === "checkbox" && (
+                      <div className="flex items-center mt-2">
+                        <input
+                          type="checkbox"
+                          checked={field.value === "YES"}
+                          onChange={(e) => handleCustomFieldChange(field.id, e.target.checked ? "YES" : "NO")}
+                          className="tesla-checkbox mr-2"
+                        />
+                        <span className="text-sm">{field.label}</span>
+                      </div>
+                    )}
+                    
+                    {field.type === "radio" && (
+                      <div className="flex gap-4 mt-2">
+                        {field.options?.map((option, index) => (
+                          <label key={index} className="flex items-center">
+                            <input
+                              type="radio"
+                              name={field.id}
+                              value={option}
+                              checked={field.value === option}
+                              onChange={() => handleCustomFieldChange(field.id, option)}
+                              className="tesla-radio mr-2"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Add Custom Field Button */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowCustomFieldModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50"
+            >
+              <Plus className="h-5 w-5" />
+              Add Custom Field
+            </button>
           </div>
 
           {/* Submit Button */}
