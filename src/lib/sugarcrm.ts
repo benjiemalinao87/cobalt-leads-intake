@@ -116,26 +116,44 @@ export const createLead = async (leadData: any): Promise<any> => {
     try {
       const token = await getValidToken();
       
+      // Create the base payload with standard fields
+      const payload = {
+        account_name: `${leadData.firstName} ${leadData.lastName}`,
+        phone_mobile: leadData.phone,
+        email1: leadData.email,
+        primary_address_street: leadData.address,
+        primary_address_city: leadData.city,
+        primary_address_state: leadData.state,
+        primary_address_postalcode: leadData.zip,
+        lead_source: leadData.leadSource,
+        product_type_c: leadData.productType,
+        created_by: "df4c95dd-8b91-4952-b9c3-d8bcc6267bc5",
+        status: "New",
+        date_entered: new Date().toISOString(),
+        assigned_user_id: "df4c95dd-8b91-4952-b9c3-d8bcc6267bc5",
+        first_name: leadData.firstName,
+        last_name: leadData.lastName,
+        full_name: `${leadData.firstName} ${leadData.lastName}`
+      };
+      
+      // Add custom fields to the payload
+      if (leadData.customFields && Array.isArray(leadData.customFields)) {
+        console.log('Processing custom fields:', leadData.customFields);
+        
+        leadData.customFields.forEach((field: any) => {
+          if (field.sugarCrmField && field.value) {
+            // Add each custom field to the payload using its SugarCRM field name
+            // @ts-ignore: Dynamic property assignment
+            payload[field.sugarCrmField] = field.value;
+          }
+        });
+      }
+      
+      console.log('Sending payload to SugarCRM:', payload);
+      
       const response = await axiosShim.post(
         `${CORS_PROXY}${SUGAR_API_URL}/Leads`, 
-        {
-          account_name: `${leadData.firstName} ${leadData.lastName}`,
-          phone_mobile: leadData.phone,
-          email1: leadData.email,
-          primary_address_street: leadData.address,
-          primary_address_city: leadData.city,
-          primary_address_state: leadData.state,
-          primary_address_postalcode: leadData.zip,
-          lead_source: leadData.leadSource,
-          product_type_c: leadData.productType,
-          created_by: "df4c95dd-8b91-4952-b9c3-d8bcc6267bc5",
-          status: "New",
-          date_entered: new Date().toISOString(),
-          assigned_user_id: "df4c95dd-8b91-4952-b9c3-d8bcc6267bc5",
-          first_name: leadData.firstName,
-          last_name: leadData.lastName,
-          full_name: `${leadData.firstName} ${leadData.lastName}`
-        },
+        payload,
         {
           headers: {
             'Content-Type': 'application/json',
