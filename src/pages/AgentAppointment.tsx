@@ -10,6 +10,7 @@ const AgentAppointment: React.FC = () => {
   const agent_email = searchParams.get('email') || '';
   const firstname = searchParams.get('firstname') || '';
   const lastname = searchParams.get('lastname') || '';
+  const lead_id = searchParams.get('lead_id') || '';
   const [showReason, setShowReason] = useState(false);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ const AgentAppointment: React.FC = () => {
     setError(null);
     setSuccess(null);
     try {
-      const url = `${WEBHOOK_URL}?agent_email=${encodeURIComponent(agent_email)}&phone=${encodeURIComponent(phone)}&firstname=${encodeURIComponent(firstname)}&lastname=${encodeURIComponent(lastname)}`;
+      const url = `${WEBHOOK_URL}?agent_email=${encodeURIComponent(agent_email)}&phone=${encodeURIComponent(phone)}&firstname=${encodeURIComponent(firstname)}&lastname=${encodeURIComponent(lastname)}&lead_id=${encodeURIComponent(lead_id)}`;
       const payload: Record<string, string> = {
         status: status === 'completed' ? 'Appointment Completed' : 'Did Not Happen',
       };
