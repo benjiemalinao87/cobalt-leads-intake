@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminPage from "./pages/Admin";
 import Login from "./pages/Login";
+import AgentAppointment from "./pages/AgentAppointment";
 import { getCurrentMember } from "./lib/auth";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,10 @@ const App = () => (
                   <AdminPage />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/agent-appointment" 
+              element={<AgentAppointment />} 
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
