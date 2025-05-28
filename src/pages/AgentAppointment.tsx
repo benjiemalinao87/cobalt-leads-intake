@@ -8,8 +8,7 @@ const AgentAppointment: React.FC = () => {
   const [searchParams] = useSearchParams();
   const phone = searchParams.get('phone') || '';
   const agent_email = searchParams.get('email') || '';
-  const firstname = searchParams.get('firstname') || '';
-  const lastname = searchParams.get('lastname') || '';
+  const sales_rep_name = searchParams.get('sales_rep_name') || '';
   const lead_id = searchParams.get('lead_id') || '';
   const sales_rep_id = searchParams.get('sales_rep_id') || '';
   const adate = searchParams.get('adate') || '';
@@ -26,7 +25,7 @@ const AgentAppointment: React.FC = () => {
     setError(null);
     setSuccess(null);
     try {
-      const url = `${WEBHOOK_URL}?agent_email=${encodeURIComponent(agent_email)}&phone=${encodeURIComponent(phone)}&firstname=${encodeURIComponent(firstname)}&lastname=${encodeURIComponent(lastname)}&lead_id=${encodeURIComponent(lead_id)}&sales_rep_id=${encodeURIComponent(sales_rep_id)}&adate=${encodeURIComponent(adate)}&atime=${encodeURIComponent(atime)}&customerName=${encodeURIComponent(customerName)}`;
+      const url = `${WEBHOOK_URL}?agent_email=${encodeURIComponent(agent_email)}&phone=${encodeURIComponent(phone)}&sales_rep_name=${encodeURIComponent(sales_rep_name)}&lead_id=${encodeURIComponent(lead_id)}&sales_rep_id=${encodeURIComponent(sales_rep_id)}&adate=${encodeURIComponent(adate)}&atime=${encodeURIComponent(atime)}&customerName=${encodeURIComponent(customerName)}`;
       const payload: Record<string, string> = {
         status:
           status === 'completed'
@@ -36,8 +35,7 @@ const AgentAppointment: React.FC = () => {
             : 'Did Not Happen',
         agent_email,
         phone,
-        firstname,
-        lastname,
+        sales_rep_name,
         lead_id,
         sales_rep_id,
         adate,
@@ -54,7 +52,7 @@ const AgentAppointment: React.FC = () => {
       });
       if (!res.ok) throw new Error('Failed to send confirmation.');
       if (status === 'completed') {
-        setSuccess(`Thank you${firstname ? ' ' + firstname : ''} for confirming!`);
+        setSuccess(`Thank you${sales_rep_name ? ' ' + sales_rep_name : ''} for confirming!`);
       } else if (status === 'no_show') {
         setSuccess('No Show reason submitted! Thank you.');
       } else {
@@ -80,7 +78,7 @@ const AgentAppointment: React.FC = () => {
         <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-6">
           <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">Agent Appointment Confirmation</h1>
           <div className="text-center text-base md:text-lg font-semibold mb-4 text-gray-800">
-            {`Hello ${firstname} ${lastname}, your appointment with ${customerName} at ${adate} ${atime} has passed. Please select option:`}
+            {`Hello ${sales_rep_name}, your appointment with ${customerName} at ${adate} ${atime} has passed. Please select option:`}
           </div>
           <div className="flex flex-col gap-4">
             <button
