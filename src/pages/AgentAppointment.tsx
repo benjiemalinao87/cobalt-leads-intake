@@ -78,7 +78,7 @@ const AgentAppointment: React.FC = () => {
         <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-6">
           <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">Agent Appointment Confirmation</h1>
           <div className="text-center text-base md:text-lg font-semibold mb-4 text-gray-800">
-            {`Hello ${sales_rep_name}, your appointment with ${customerName} at ${adate} ${atime} has passed. Please select option:`}
+            {`Hello ${sales_rep_name}, your appointment with ${customerName} at ${adate} ${atime} has passed. Please select options:`}
           </div>
           <div className="flex flex-col gap-4">
             <button
