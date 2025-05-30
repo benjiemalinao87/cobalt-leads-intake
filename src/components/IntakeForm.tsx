@@ -684,11 +684,11 @@ const IntakeForm: React.FC = () => {
   ];
 
   const productTypeOptions = [
-    "Solar Panels",
-    "Solar Roof",
-    "Powerwall",
-    "Solar Panel + Powerwall",
-    "Solar Roof + Powerwall",
+    "New PV",
+    "Service",
+    "Commercial",
+    "System Upgrade",
+    "EV Charger",
     "Other",
   ];
 
