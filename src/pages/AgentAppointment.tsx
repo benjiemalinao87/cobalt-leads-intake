@@ -32,7 +32,7 @@ const AgentAppointment: React.FC = () => {
             ? 'Appointment Completed'
             : status === 'no_show'
             ? 'No Show'
-            : 'Did Not Happen',
+            : 'Rescheduled',
         agent_email,
         phone,
         sales_rep_name,
@@ -100,7 +100,7 @@ const AgentAppointment: React.FC = () => {
               onClick={() => setShowReason('not_happen')}
               disabled={loading}
             >
-              Did Not Happen
+              Rescheduled
             </button>
           </div>
           {showReason && (
