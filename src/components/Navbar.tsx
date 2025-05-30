@@ -38,6 +38,16 @@ const Navbar: React.FC = () => {
             >
               Admin Dashboard
             </Link>
+            <Link 
+              to="/agent-appointment" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === "/agent-appointment" 
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
+                  : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              }`}
+            >
+              Agent Appointment Confirmation
+            </Link>
           </div>
         </div>
         
